@@ -10,7 +10,10 @@
 /* This Parse() function simply converts a UGM text into a HTML */
 
 
+/* this autocorrect will be used to autocorrect stuff
 
+  also, it is biased towards QWERTY keybaord, but most English keybaords are similar to QWERTY.
+*/
 const autocorrect = {
   
   /* every key */
@@ -128,11 +131,42 @@ const autocorrect = {
     "?":["\"",":",">"]
   },
   
+  vowels: [ "a", "e", "i", "o", "u", "A", "E", "I", "O", "U" ],
+  
+  /* the "distance" between 2 charactes */
+  disc: function( char1, char2 ){
+    if( char === char2 ) return 0;
+    if( vowels.indexOf( char1 ) + vowels.indexOf( char2 ) > -2 ) return 0.2;
+    if(
+      autocorrect.closeKeys[ char1 ].indexOf( char2 ) > -1 ||
+      autocorrect.closeKeys[ char2 ].indexOf( char1 ) > -1
+    ) return 0.4;
+    
+    return 1;
+  },
   /* the "distance" between 2 words */
   dis: function( word1, word2 ){
-    for( let i = 0; i < word1.length; i++ ){
+    let d = 0;
+    for( let i1 = 0, i2 = 0, dprev, dcurr, dnext, cont; i1 < word1.length; i1++ ){
+      cont = true;
+      dprev = autocorrect.disc( word1[ i1 ], word2[ i2 -1 ] );
+      dcurr = autocorrect.disc( word1[ i1 ], word2[ i2    ] );
+      dnext = autocorrect.disc( word1[ i1 ], word2[ i2 +1 ] );
+      if( dprev < dcurr && dprev < dnext ){
+        d += dprev * 1.2;
+        i2--;
+        cont = false;
+      }
+      if( dnext < dcurr && cont ){
+        d += dnext * 1.2;
+        i2++;
+        cont = false;
+      }
+      if( cont ) d += dcurr;
       
+      if( i2 < word2.length - 1 ) i2++;
     }
+    return d;
   },
   
   /* find the word in words that is "closest" to inWord */
@@ -157,6 +191,7 @@ const autocorrect = {
   for( let i = 48, UPKey, downKey; i < autocorrect.allKeys.length; i++ ){
     UPKey = autocorrect.allKeys[ i ];
     downKey = autocorrect.allKeys[ i - 48 ];
+    console.log( i, i - 48, UPKey, downKey )
     autocorrect.closeKeys[ UPKey ].push( downKey );
     autocorrect.closeKeys[ downKey ].push( UPKey );
   }
@@ -217,8 +252,30 @@ ugm = {
 };
 
 /*
-Here are some examples of UGM thingsm andd 
+Here are some examples of UGM things and the objects they are converted into
 
+* box1
+  header: Gum flavors
+  contains: :upgrades:tag( gum_flavors )
+  class: gummy
+=>
+{
+  name: "box1",
+  header: "Gum Flavors",
+  contains: [
+    selector{
+      groups: [
+        "upgrades",
+        expression_function{
+          name: "tag",
+          params: [ "gum_flavors" ]
+        }
+      ],
+      result: [],
+      needs_updated: true
+    }
+  ]
+}
 
 
 */
